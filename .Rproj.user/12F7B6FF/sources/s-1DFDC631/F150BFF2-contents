@@ -1,0 +1,205 @@
+# Paquetes
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(zip)
+library(data.table)
+
+
+mun_son <- read_csv("02Resultados/mun_son.csv")
+# Datos diarios
+
+covid.url <- "http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip"
+covid.archivo <- "C:/Users/luism/OneDrive/R/COVID/Datosabiertos/DA2021/10/datos_abiertos_covid19_10.10.2021.zip"
+covid.dic.conceptos.url <- "http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/diccionario_datos_covid19.zip"
+covid.dic.conceptos.archivo <- "./01Datos/diccionario.zip"
+
+# Función de descarga
+if(!file.exists(covid.archivo)){
+  download.file(covid.url, destfile = covid.archivo)  
+  unzip(covid.archivo, exdir = "./01Datos")
+  download.file(covid.dic.conceptos.url, destfile = covid.dic.conceptos.archivo)  
+  unzip(covid.dic.conceptos.archivo, exdir = "./01Datos/diccionario_datos_covid19/")
+  fecha.descarga <- date()
+}
+
+## Código de @segasi (Sebastián Garrido) para la conversión de la información de codificada (el cual actualicé a la nueva clasificación de la SSA)
+
+# Lectura de datos
+son <- fread("01Datos/211010COVID19MEXICO.csv", select = c("FECHA_ACTUALIZACION","FECHA_SINTOMAS","FECHA_DEF","FECHA_INGRESO", "SECTOR", "SEXO", 
+                                                           "ENTIDAD_RES", "MUNICIPIO_RES", "TIPO_PACIENTE", "INTUBADO", "NEUMONIA", "EDAD", "CLASIFICACION_FINAL", "UCI"), 
+            showProgress = FALSE)  %>% clean_names() %>% filter(entidad_res==26) 
+# Decesos
+son <- 
+  son %>% mutate(deceso=if_else(fecha_def=="9999-99-99","No", "Sí"))
+
+# Síntomas
+son <- 
+  son %>% mutate(dias_sintomas=as.numeric(as.Date(fecha_actualizacion)-as.Date(fecha_sintomas))) 
+
+# Casos Activos
+son <- 
+  son %>% mutate(activo=if_else(dias_sintomas>13,"No", "Sí"))
+
+
+## Convertir valores numéricos en texto ----
+son <- 
+  son %>% 
+  mutate(sector = case_when(sector == 1 ~ "Cruz Roja",
+                            sector == 2 ~ "DIF",
+                            sector == 3 ~ "Estatal",
+                            sector == 4 ~ "IMSS",
+                            sector == 5 ~ "IMSS-Bienestar",
+                            sector == 6 ~ "ISSSTE",
+                            sector == 7 ~ "Municipal",
+                            sector == 8 ~ "PEMEX",
+                            sector == 9 ~ "Privada",
+                            sector == 10 ~ "SEDENA",
+                            sector == 11 ~ "SEMAR",
+                            sector == 12 ~ "SSA",
+                            sector == 13 ~ "Universitario",
+                            sector == 99 ~ "No especificado"),
+         sexo = case_when(sexo == 1 ~ "Mujer",
+                          sexo == 2 ~"Hombre",
+                          sexo == 99 ~ "No especificado"),
+         tipo_paciente = case_when(tipo_paciente == 1 ~ "Ambulatorio",
+                                   tipo_paciente == 2 ~ "Hospitalizado",
+                                   tipo_paciente == 99 ~ "No especificado"),
+         clasificacion_final_simple = case_when(clasificacion_final  == 1 ~ "Caso confirmado",
+                                                clasificacion_final  == 2 ~ "Caso confirmado",
+                                                clasificacion_final  == 3 ~ "Caso confirmado",
+                                                clasificacion_final  == 4 ~ "Descartado",
+                                                clasificacion_final  == 5 ~ "Descartado",
+                                                clasificacion_final  == 6 ~ "Caso sospechoso",
+                                                clasificacion_final  == 7 ~ "Descartado"),
+         clasificacion_final = case_when(clasificacion_final  == 1 ~ "Caso de covid-19 confirmado por asociación clínica epidemiológica",
+                                         clasificacion_final  == 2 ~ "Caso de covid-19 confirmado por comité de dictaminación",
+                                         clasificacion_final  == 3 ~ "Caso de covid-19 confirmado por laboratorio",
+                                         clasificacion_final  == 4 ~ "Inválido por laboratorio",
+                                         clasificacion_final  == 5 ~ "No realizado por laboratorio",
+                                         clasificacion_final  == 6 ~ "Caso sospechoso",
+                                         clasificacion_final  == 7 ~ "Negativo a SARS-CoV-2"),
+         intubado = case_when(intubado == 1 ~ "Sí",
+                              intubado == 2 ~ "No",
+                              intubado == 97 ~ "No aplica",
+                              intubado == 98 ~ "Se ignora",
+                              intubado == 99 ~ "No especificado"),
+         neumonia = case_when(neumonia == 1 ~ "Sí",
+                              neumonia == 2 ~ "No",
+                              neumonia == 97 ~ "No aplica",
+                              neumonia == 98 ~ "Se ignora",
+                              neumonia == 99 ~ "No especificado"),
+         uci = case_when(uci == 1 ~ "Sí",
+                         uci == 2 ~ "No",
+                         uci == 97 ~ "No aplica",
+                         uci == 98 ~ "Se ignora",
+                         uci == 99 ~ "No especificado"),
+         grupoedad = case_when(edad >= 0  & edad <= 14 ~ "0-14",
+                               edad >= 15  & edad <= 29 ~ "15-29",
+                               edad >= 30  & edad <= 59 ~ "30-59",
+                               edad >= 60 ~ "60 o más"))
+tblson <- son %>% 
+  group_by(municipio_res, sector, grupoedad, sexo) %>% 
+  summarise(fecha_reporte=max(as.Date(fecha_actualizacion)), 
+            observaciones=n(),
+            confirmados=sum(clasificacion_final_simple=="Caso confirmado"),
+            decesos=sum(deceso=="Sí" & clasificacion_final_simple=="Caso confirmado"),
+            pruebas=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio" | clasificacion_final=="Negativo a SARS-CoV-2"),
+            confirmados_lab=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio"),
+            descartados_lab=sum(clasificacion_final=="Negativo a SARS-CoV-2"),
+            sospechosos=sum(clasificacion_final=="Caso sospechoso"),
+            hospitalizados=sum(tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            uci=sum(uci=="Sí" & tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            neumonia=sum(neumonia =="Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            intubado=sum(intubado== "Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            ambulatorios=sum(tipo_paciente == "Ambulatorio"& clasificacion_final_simple=="Caso confirmado"),
+            activos=sum(deceso=="No" & activo=="Sí" & clasificacion_final_simple=="Caso confirmado"),
+            a_hospitalizados=sum(deceso=="No" & activo=="Sí" & tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            a_ambulatorios=sum(deceso=="No" & activo=="Sí" & tipo_paciente == "Ambulatorio"& clasificacion_final_simple=="Caso confirmado" ),
+            a_decesos=sum( deceso=="Sí" & activo=="Sí" & clasificacion_final_simple=="Caso confirmado")) %>% 
+  mutate(recuperados=(confirmados-decesos-activos))
+
+tblson <- mun_son %>% left_join(tblson, by="municipio_res") 
+
+
+COVIDSONORA <- read_csv("02Resultados/COVIDSONORA_REPORTE.csv", 
+                        col_types = cols(X1 = col_skip(), fecha_reporte = col_date(format = "%Y-%m-%d")), 
+                        locale = locale(encoding = "ISO-8859-1"))
+
+COVIDSONORA <- bind_rows(COVIDSONORA, tblson)
+
+write.csv(COVIDSONORA,"C:/Users/luism/OneDrive/R/COVID/Datosabiertos/02Resultados/COVIDSONORA_REPORTE.csv")
+write.csv(COVIDSONORA,"C:/Users/luism/OneDrive/R/COVID/Sonora_Federal/Bases/COVIDSONORA_REPORTE.csv")
+
+
+## DIA DE SINTOMAS
+
+sintomas <- son %>% 
+  group_by(municipio_res, sector, grupoedad, sexo, fecha_sintomas) %>% 
+  summarise(observaciones=n(),
+            confirmados=sum(clasificacion_final_simple=="Caso confirmado"),
+            decesos=sum(deceso=="Sí" & clasificacion_final_simple=="Caso confirmado"),
+            pruebas=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio" | clasificacion_final=="Negativo a SARS-CoV-2"),
+            confirmados_lab=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio"),
+            descartados_lab=sum(clasificacion_final=="Negativo a SARS-CoV-2"),
+            sospechosos=sum(clasificacion_final=="Caso sospechoso"),
+            hospitalizados=sum(tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            uci=sum(uci=="Sí" & tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            neumonia=sum(neumonia =="Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            intubado=sum(intubado== "Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            ambulatorios=sum(tipo_paciente == "Ambulatorio"& clasificacion_final_simple=="Caso confirmado"))
+
+sintomas <- mun_son %>% left_join(sintomas, by="municipio_res") 
+
+write.csv(sintomas,"C:/Users/luism/OneDrive/R/COVID/Datosabiertos/02Resultados/COVIDSONORA_SINTOMAS.csv")
+write.csv(sintomas,"C:/Users/luism/OneDrive/R/COVID/Sonora_Federal/Bases/COVIDSONORA_SINTOMAS.csv")
+## DIA DE INGRESO
+
+ingreso <- son %>% 
+  group_by(municipio_res, sector, grupoedad, sexo, fecha_ingreso) %>% 
+  summarise(observaciones=n(),
+            confirmados=sum(clasificacion_final_simple=="Caso confirmado"),
+            decesos=sum(deceso=="Sí" & clasificacion_final_simple=="Caso confirmado"),
+            pruebas=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio" | clasificacion_final=="Negativo a SARS-CoV-2"),
+            confirmados_lab=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio"),
+            descartados_lab=sum(clasificacion_final=="Negativo a SARS-CoV-2"),
+            sospechosos=sum(clasificacion_final=="Caso sospechoso"),
+            hospitalizados=sum(tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            uci=sum(uci=="Sí" & tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            neumonia=sum(neumonia =="Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            intubado=sum(intubado== "Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            ambulatorios=sum(tipo_paciente == "Ambulatorio"& clasificacion_final_simple=="Caso confirmado"),
+            activos=sum(deceso=="No" & activo=="Sí" & clasificacion_final_simple=="Caso confirmado"))
+
+ingreso <- mun_son %>% left_join(ingreso, by="municipio_res") 
+
+write.csv(ingreso,"C:/Users/luism/OneDrive/R/COVID/Datosabiertos/02Resultados/COVIDSONORA_INGRESO.csv")
+write.csv(ingreso,"C:/Users/luism/OneDrive/R/COVID/Sonora_Federal/Bases/COVIDSONORA_INGRESO.csv")
+
+## DIA DE DEFUNCION
+
+defuncion <- son %>% filter(deceso=="Sí") %>% 
+  group_by(municipio_res, sector, grupoedad, sexo, fecha_def) %>% 
+  summarise(observaciones=n(),
+            confirmados=sum(clasificacion_final_simple=="Caso confirmado"),
+            decesos=sum(deceso=="Sí" & clasificacion_final_simple=="Caso confirmado"),
+            pruebas=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio" | clasificacion_final=="Negativo a SARS-CoV-2"),
+            confirmados_lab=sum(clasificacion_final=="Caso de covid-19 confirmado por laboratorio"),
+            descartados_lab=sum(clasificacion_final=="Negativo a SARS-CoV-2"),
+            sospechosos=sum(clasificacion_final=="Caso sospechoso"),
+            hospitalizados=sum(tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            uci=sum(uci=="Sí" & tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            neumonia=sum(neumonia =="Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            intubado=sum(intubado== "Sí", tipo_paciente == "Hospitalizado"& clasificacion_final_simple=="Caso confirmado"),
+            ambulatorios=sum(tipo_paciente == "Ambulatorio"& clasificacion_final_simple=="Caso confirmado"))
+
+  defuncion <- mun_son %>% left_join(defuncion, by="municipio_res") 
+
+write.csv(defuncion,"C:/Users/luism/OneDrive/R/COVID/Datosabiertos/02Resultados/COVIDSONORA_DEFUNCION.csv")
+write.csv(defuncion,"C:/Users/luism/OneDrive/R/COVID/Sonora_Federal/Bases/COVIDSONORA_DEFUNCION.csv")
+
+unlink("C:/Users/luism/OneDrive/R/COVID/Datosabiertos/01Datos/*", recursive = T, force = T)
+
+
+                                                                   

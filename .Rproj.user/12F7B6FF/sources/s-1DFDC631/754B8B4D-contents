@@ -1,0 +1,723 @@
+---
+title: "Indicadores"
+author: "LAMP"
+date: "19/5/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE, cache=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+if(!require('pacman')) install.packages('pacman')
+
+
+pacman::p_load(tidyverse, extrafont, scales, patchwork, ggrepel, broom, ggsci, viridis, 'Cairo', directlabels, ggalt, ggtext, readxl, gghighlight, cairoDevice,treemapify)
+
+negrita <- "Segoe UI Black"
+normal <- "Segoe UI"
+clara <- "Segoe UI Light"
+media <- "Segoe UI Semibold"
+
+fuenteSEC <- "**Fuente:** Elaboración ISAF con información de Secretaría de Educación y Cultura."
+fuenteindicadores <- "**Fuente:** Elaboración ISAF con información del Sistema Educativo Nacional-SEP."
+
+fuenteindicadorescon <- "**Fuente:** Elaboración ISAF con información del Sistema Educativo Nacional-SEP y Proyecciones de Población de CONAPO."
+fuentePresupuestoFed <- "**Fuente:** Elaboración ISAF con información de la Cuenta de la Hacienda Pública Federal 2012-2020. Portal Transparencia Presupuestaria, SHCP."
+fuenteANUIES <- "**Fuente:** Elaboración ISAF con información de ANUIES."
+
+fuenteconacyt <- "**Fuente:** Elaboración ISAF con información de CONACYT"
+fuenteconacytvoc<- "**Fuente:** Elaboración ISAF con información de la Dirección de Vocaciones Científicas y Sistema Nacional de Investigadores de CONACYT"
+
+fuentepresupuesto <- "**Fuente:** Elaboración ISAF con información del Presupuesto de Egresos<br>del estado de Sonora, ejercicio fiscal 2020."
+fuentecp <- "**Fuente:** Elaboración ISAF con información de la Cuenta Pública del Gobierno del estado de Sonora, ejercicio 2020."
+fuentecpanuies <- "**Fuente:** Elaboración ISAF con información de ANIUES y de las Cuentas Públicas del Estado de Sonora de los ejercicios 2015 y 2020."
+
+temaev <- theme (axis.line = element_line(linetype = "solid"), plot.title.position = 'plot',
+                 plot.title = element_text(family = negrita, size = 32,color = "#114B5F"),  
+                 plot.subtitle = element_text(family = normal, size = 20, color = "black"), legend.title = element_blank(),
+                 strip.text = element_text(family = negrita, size = 12),
+                 axis.text.x = element_text(family = normal, size =16, angle = 90, color="black"),
+                 axis.text.y = element_text(family = normal, size =16, color="black"),
+                 plot.background = element_rect(fill = "white", color = "white", size = 5),
+                 axis.title.x = element_text(family = normal, size = 18, hjust=0),
+                 axis.title.y = element_text(family = normal, size =18, hjust=1), 
+                 plot.caption = element_markdown(family = normal, size = 14, color = "black"), panel.grid = element_line(size=0.2), 
+                 legend.text = element_text(family = normal, size = 16),legend.position = "none", 
+                 panel.grid.minor= element_blank(), panel.grid.major= element_blank(), plot.margin = unit(c(0.7,0.7,0.7,0.7), "cm"))
+
+```
+
+## G17 ABSORCIÓN
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+absorcion <- read_excel("Datos/TGPRES.xlsx", 
+                                sheet = "Absorcion", range = "A1:G21")
+absorcion <- absorcion %>%
+  pivot_longer(!Ciclo, names_to = "Entidad", values_to = "Absorción") 
+
+absorcion <- absorcion %>% mutate(Ciclo = factor(Ciclo))
+
+
+absciclo <- as.character(unique(absorcion$Ciclo))
+
+absorcion<- absorcion %>% mutate(Ciclo=as.integer(Ciclo))
+absorcionsinsonora <- absorcion %>% filter(Entidad!="Sonora")
+absorcionsonora <- absorcion %>% filter(Entidad=="Sonora")
+
+ggplot() + 
+  geom_vline(aes(xintercept= 3), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=3.2, y=.6, label="EBC"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 9), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=9.2, y=.6, label="GPE"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 15), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=15.2, y=.6, label="CPA"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_line(data= absorcionsinsonora, aes(x=Ciclo, y=Absorción, group=Entidad, color=Entidad), size=1.5, alpha=0.5) +
+  geom_point( data= absorcionsinsonora, aes(x=Ciclo, y=Absorción, group=Entidad, fill=Entidad), size=2 , shape=21, color="white", stroke=0.8, alpha=0.5) + 
+  geom_dl(data= absorcionsinsonora, aes(x=Ciclo, y=Absorción, group=Entidad, label = Entidad, color=Entidad), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 1.3, fontfamily= normal, alpha=1)) +
+  geom_line(data= absorcionsonora, aes(x=Ciclo, y=Absorción), color="#114B5F", size=2, alpha=0.8) +
+  geom_point(data= absorcionsonora, aes(x=Ciclo, y=Absorción),fill="#114B5F", size=2.5 , shape=21, color="white", stroke=0.8) + 
+  geom_dl(data= absorcionsonora, aes(x=Ciclo, y=Absorción), label = "Sonora", color="#114B5F", method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 1.5, fontfamily= negrita)) +
+  scale_color_npg() + 
+  scale_fill_npg()+
+  scale_x_continuous(limits=c(min(absorcion$Ciclo)-0.5,max(absorcion$Ciclo)+2),
+                    breaks=(min(absorcion$Ciclo)):(max(absorcion$Ciclo)+2), 
+                    labels=c(absciclo, " ", " ")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() + temaev +  
+  labs(y = NULL, 
+       x = "Ciclo escolar",legend= NULL, title  = "Índice de Absorción", 
+       subtitle= "Estudiantes de nuevo ingreso en educación superior en relación a los egresados de media superior por ciclo escolar", 
+       caption = fuenteindicadores)
+
+ggsave("Gráficos/G17.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+
+```
+
+
+## G17 COBERTURA
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Cobertura <- read_excel("Datos/TGPRES.xlsx", 
+                        sheet = "Cobertura", range = "A1:G22")
+Cobertura <- Cobertura  %>%
+  pivot_longer(!Ciclo, names_to = "Entidad", values_to = "Cobertura") 
+
+Cobertura <- Cobertura  %>% mutate(Ciclo = factor(Ciclo))
+
+
+Cobciclo <- as.character(unique(Cobertura$Ciclo))
+
+Cobertura <- Cobertura  %>% mutate(Ciclo=as.integer(Ciclo))
+Coberturasinsonora <- Cobertura %>% filter(Entidad!="Sonora")
+Coberturasonora <- Cobertura %>% filter(Entidad=="Sonora")
+
+ggplot() + 
+  geom_vline(aes(xintercept= 3), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=3.2, y=.11, label="EBC"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 9), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=9.2, y=.11, label="GPE"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 15), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=15.2, y=.11, label="CPA"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_line(data= Coberturasinsonora, aes(x=Ciclo, y=Cobertura, group=Entidad, color=Entidad), size=1.5, alpha=0.5) +
+  geom_point( data= Coberturasinsonora, aes(x=Ciclo, y=Cobertura, group=Entidad, fill=Entidad), size=2 , shape=21, color="white", stroke=0.8, alpha=0.5) + 
+  geom_dl(data= Coberturasinsonora, aes(x=Ciclo, y=Cobertura, group=Entidad, label = Entidad, color=Entidad), method = list(dl.trans(x = x + 0.2), "last.points", cex = 1.3, fontfamily= normal, alpha=1)) +
+  geom_line(data= Coberturasonora, aes(x=Ciclo, y=Cobertura), color="#114B5F", size=2, alpha=0.8) +
+  geom_point(data= Coberturasonora, aes(x=Ciclo, y=Cobertura),fill="#114B5F", size=2.5 , shape=21, color="white", stroke=0.8) + 
+  geom_dl(data= Coberturasonora, aes(x=Ciclo, y=Cobertura), label = "Sonora", color="#114B5F", method = list(dl.trans(x = x + 0.2), "last.points", cex = 1.5, fontfamily= negrita)) +
+  scale_color_npg() + 
+  scale_fill_npg()+
+  scale_x_continuous(limits=c(min(Cobertura$Ciclo)-0.5,max(Cobertura$Ciclo)+2),
+                     breaks=(min(Cobertura$Ciclo)):(max(Cobertura$Ciclo)+2), 
+                     labels=c(Cobciclo, " ", " ")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() + temaev +
+  labs(y = NULL, 
+       x = "Ciclo escolar",legend= NULL, title  = "Índice de Cobertura", 
+       subtitle= "Matrícula total de instituciones de educación superior en relación a la población total de 18 a 22 años por ciclo escolar", 
+       caption =fuenteindicadorescon)
+
+ggsave("Gráficos/G16.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+
+```
+
+
+## G18 DESERCIÓN
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Desercion <- read_excel("Datos/TGPRES.xlsx", 
+                        sheet = "Desercion", range = "A1:G21")
+Desercion <- Desercion %>%
+  pivot_longer(!Ciclo, names_to = "Entidad", values_to = "Desercion") 
+
+Desercion <- Desercion  %>% mutate(Ciclo = factor(Ciclo))
+
+
+Desciclo <- as.character(unique(Desercion$Ciclo))
+
+Desercion <- Desercion  %>% mutate(Ciclo=as.integer(Ciclo))
+Desercionsinsonora <- Desercion %>% filter(Entidad!="Sonora")
+Desercionsonora <- Desercion %>% filter(Entidad=="Sonora")
+
+ggplot() + 
+  geom_vline(aes(xintercept= 3), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=3.2, y=-.01, label="EBC"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 9), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=9.2, y=-.01, label="GPE"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 15), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=15.2, y=-.01, label="CPA"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_line(data= Desercionsinsonora, aes(x=Ciclo, y=Desercion, group=Entidad, color=Entidad), size=1.5, alpha=0.5) +
+  geom_point( data= Desercionsinsonora, aes(x=Ciclo, y=Desercion, group=Entidad, fill=Entidad), size=2 , shape=21, color="white", stroke=0.8, alpha=0.5) + 
+  geom_dl(data= Desercionsinsonora, aes(x=Ciclo, y=Desercion, group=Entidad, label = Entidad, color=Entidad), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 1.3, fontfamily= normal, alpha=1)) +
+  geom_line(data= Desercionsonora, aes(x=Ciclo, y=Desercion), color="#114B5F", size=2, alpha=0.8) +
+  geom_point(data= Desercionsonora, aes(x=Ciclo, y=Desercion),fill="#114B5F", size=2.5 , shape=21, color="white", stroke=0.8) + 
+  geom_dl(data= Desercionsonora, aes(x=Ciclo, y=Desercion), label = "Sonora", color="#114B5F", method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 1.5, fontfamily= negrita)) +
+  scale_color_npg() + 
+  scale_fill_npg()+
+  scale_x_continuous(limits=c(min(Desercion$Ciclo)-0.5,max(Desercion$Ciclo)+2),
+                     breaks=(min(Desercion$Ciclo)):(max(Desercion$Ciclo)+2), 
+                     labels=c(Desciclo, " ", " ")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() + temaev + 
+  labs(y = NULL, 
+       x = "Ciclo escolar",legend= NULL, title  = "Índice de Deserción", 
+       subtitle= "Estudiantes que abandonan sus estudios en relación a la matrícula total por ciclo escolar", 
+       caption =fuenteindicadores)
+
+
+ggsave("Gráficos/G18.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+## G19 TERMINAL
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Terminal <- read_excel("Datos/TGPRES.xlsx", 
+                        sheet = "Terminal", range = "A1:G17")
+Terminal <- Terminal %>%
+  pivot_longer(!Ciclo, names_to = "Entidad", values_to = "Terminal") 
+
+Terminal <- Terminal  %>% mutate(Ciclo = factor(Ciclo))
+
+
+Terciclo <- as.character(unique(Terminal$Ciclo))
+
+Terminal <- Terminal  %>% mutate(Ciclo=as.integer(Ciclo))
+Terminalsinsonora <- Terminal %>% filter(Entidad!="Sonora")
+Terminalsonora <- Terminal %>% filter(Entidad=="Sonora")
+
+ggplot() + 
+  # geom_vline(aes(xintercept= 1), color= "gray20", linetype="dashed", alpha=.5) +
+  geom_text(mapping=aes(x=1.2, y=0.3, label="EBC"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 5), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=5.2, y=0.3, label="GPE"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 11), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=11.2, y=0.3, label="CPA"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_line(data= Terminalsinsonora, aes(x=Ciclo, y=Terminal, group=Entidad, color=Entidad), size=1.5, alpha=0.5) +
+  geom_point( data= Terminalsinsonora, aes(x=Ciclo, y=Terminal, group=Entidad, fill=Entidad), size=2 , shape=21, color="white", stroke=0.8, alpha=0.5) + 
+  geom_dl(data= Terminalsinsonora, aes(x=Ciclo, y=Terminal, group=Entidad, label = Entidad, color=Entidad), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 1.3, fontfamily= normal, alpha=1)) +
+  geom_line(data= Terminalsonora, aes(x=Ciclo, y=Terminal), color="#114B5F", size=2, alpha=0.8) +
+  geom_point(data= Terminalsonora, aes(x=Ciclo, y=Terminal),fill="#114B5F", size=2.5 , shape=21, color="white", stroke=0.8) + 
+  geom_dl(data= Terminalsonora, aes(x=Ciclo, y=Terminal), label = "\nSonora", color="#114B5F", method = list(dl.trans(x = x + 0.2, y = y + 0.2), "last.points", cex = 1.5, fontfamily= negrita)) +
+  scale_color_npg() + 
+  scale_fill_npg()+
+  scale_x_continuous(limits=c(min(Terminal$Ciclo)-0.5,max(Terminal$Ciclo)+2),
+                     breaks=(min(Terminal$Ciclo)):(max(Terminal$Ciclo)+2), 
+                     labels=c(Terciclo, " ", " ")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() + temaev +
+  labs(y = NULL, 
+       x = "Cohorte de 5 años",legend= NULL, title  = "Índice de Eficiencia Terminal", 
+       subtitle= "Estudiantes egresados en el ciclo escolar respecto a los alumnos de nuevo ingreso de 5 ciclos escolares atrás.", 
+       caption =fuenteindicadores)
+
+
+ggsave("Gráficos/G19.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+
+```
+
+
+## G20 TITULACIÓN
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Titulacion <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Titulacion", range = "A1:G15")
+Titulacion <- Titulacion %>%
+  pivot_longer(!Ciclo, names_to = "Entidad", values_to = "Titulacion") 
+
+Titulacion <- Titulacion  %>% mutate(Ciclo = factor(Ciclo))
+
+
+Titciclo <- as.character(unique(Titulacion$Ciclo))
+
+Titulacion <- Titulacion %>% mutate(Ciclo=as.integer(Ciclo))
+Titulacionsinsonora <- Titulacion %>% filter(Entidad!="Sonora")
+Titulacionsonora <- Titulacion %>% filter(Entidad=="Sonora")
+
+ggplot() + 
+  # geom_vline(aes(xintercept= 1), color= "gray20", linetype="dashed", alpha=.5) +
+  # geom_text(mapping=aes(x=1.2, y=0.3, label="EBC"),color= "gray20", size=3, vjust=-0.4, hjust=0, family=clara) +
+   geom_vline(aes(xintercept= 3), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x= 3.2, y=0.45, label="GPE"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_vline(aes(xintercept= 9), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_text(mapping=aes(x=9.2, y=0.45, label="CPA"),color= "gray20", size=6, vjust=-0.4, hjust=0, family=clara) +
+  geom_line(data= Titulacionsinsonora, aes(x=Ciclo, y=Titulacion, group=Entidad, color=Entidad), size=1.5, alpha=0.5) +
+  geom_point( data= Titulacionsinsonora, aes(x=Ciclo, y=Titulacion, group=Entidad, fill=Entidad), size=2 , shape=21, color="white", stroke=1, alpha=0.5) + 
+  geom_dl(data= Titulacionsinsonora, aes(x=Ciclo, y=Titulacion, group=Entidad, label = Entidad, color=Entidad), method = list(dl.trans(x = x + 0.2), "last.points", cex = 1.3, fontfamily= normal, alpha=1)) +
+  geom_line(data= Titulacionsonora, aes(x=Ciclo, y=Titulacion), color="#114B5F", size=2, alpha=0.8) +
+  geom_point(data= Titulacionsonora, aes(x=Ciclo, y=Titulacion),fill="#114B5F", size=2.5 , shape=21, color="white", stroke=0.8) + 
+  geom_dl(data= Titulacionsonora, aes(x=Ciclo, y=Titulacion), label = "Sonora\n", color="#114B5F", method = list(dl.trans(x = x + 0.2, y = y - 0.4), "last.points", cex = 1.5, fontfamily= negrita)) +
+  scale_color_npg() + 
+  scale_fill_npg()+
+  scale_x_continuous(limits=c(min(Titulacion$Ciclo)-0.5,max(Titulacion$Ciclo)+2),
+                     breaks=(min(Titulacion$Ciclo)):(max(Titulacion$Ciclo)+2), 
+                     labels=c(Titciclo, " ", " ")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() + temaev + 
+  labs(y = NULL, 
+       x = "Ciclo escolar",legend= NULL, title  = "Índice de Titulación", 
+       subtitle= "Estudiantes titulados en el ciclo escolar en relación a los egresados del ciclo escolar anterior.", 
+      caption =fuenteindicadores)
+
+
+ggsave("Gráficos/G20.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+## G02 ESCUELAS
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Escuelas <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Escuelas", range = "A1:G41")
+ggplot(Escuelas) + 
+  geom_col(aes(x=Año, y=Escuelas, fill=Sostenimiento), color="white", size= 1.5, position = "dodge", alpha=0.9) +
+  scale_fill_manual(values=c("#F45B69","#114B5F"))+
+  scale_x_continuous(breaks = seq(2000, 2019, by = 1))+
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  theme_minimal() + temaev + theme(legend.position = c(0.1,0.8)) +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Escuelas de educación superior en Sonora", 
+       subtitle= "Número de escuelas de educación superior por tipo de sostenimiento en el estado de Sonora. | Años 2000-2019.", 
+       caption =fuenteSEC)
+
+
+ggsave("Gráficos/G02.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+
+## G03 MATRICULA
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Matricula <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Matriculasub", range = "A1:c11")
+
+Subs<-c( "Universidades públicas estatales",
+"Universidades públicas estatales con apoyo solidario",
+"Universidades tecnológicas" ,"Institutos tecnológicos descentralizados", "Escuelas normales públicas")
+
+Matricula <- Matricula %>% mutate(Subsistema=factor(Subsistema, levels = Subs))
+
+
+ggplot(Matricula, aes(x=Subsistema, y=Matrícula, fill=Ciclo)) + 
+  geom_bar(stat = "identity", color="white", position = position_dodge(), alpha=0.9) +
+  geom_text(aes(label=scales::comma(Matrícula)), color= "black", family=normal, size=7, position = position_dodge(0.9), hjust=-0.2) + 
+  scale_fill_manual(values=c("#F45B69","#114B5F"))+
+  scale_y_continuous(limits=c(0,max(Matricula$Matrícula)+5000))+
+  guides(fill = guide_legend(reverse = TRUE)) +
+  #scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  coord_flip()+
+  theme_minimal() + temaev + theme(legend.position = c(0.8,0.9), legend.text = element_text(size=20), 
+                                   axis.text.x = element_blank(),   panel.grid= element_blank(), axis.line= element_blank(),
+                                   legend.spacing.y = unit(2,"cm"), legend.key.size = unit(1,"cm"),  axis.text.y = element_text(size=22, family=normal, color="black")) +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Matrícula de IPES estatales por subsistema", 
+       subtitle= "Matrícula total inscrita en instituciones públicas de educación superior estatales por subsistema en Sonora.\nCiclos 2010-2011 y 2019-2020.", 
+       caption =fuenteANUIES)
+
+
+ggsave("Gráficos/G03.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+## G05 INGSOC
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+ingsoc <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "IngSoc", range = "A1:c7")
+ingsoc <- ingsoc %>% mutate(label= paste0(Porcentaje*100,"%"))
+
+ggplot(ingsoc) + 
+  geom_line(aes(x=Ciclo, y=Porcentaje, group=Campos, color=Campos), size= 3, alpha=0.9) +
+  geom_point(aes(x=Ciclo, y=Porcentaje, group=Campos, color=Campos),fill="white",shape=21, stroke=3, size= 3, alpha=0.9) +
+  geom_text(aes(x=Ciclo, y=Porcentaje, label = label, color=Campos), vjust=2.5,family=normal, size=7 ) +
+  geom_dl(aes(x=Ciclo, y=Porcentaje, label = Campos, color=Campos), method = list(dl.trans(x = x-10, y=y+1), "last.bumpup", cex = 1.5, fontfamily= normal, alpha=1)) +
+  scale_fill_manual(values=c("#F45B69","#114B5F"))+
+  scale_color_manual(values=c("#F45B69","#114B5F"))+
+  scale_x_discrete(expand=c(0,0.3))+
+  scale_y_continuous(labels=percent, limits=c(0.2,.6),breaks=seq(0,0.6, by=.10)) +
+  coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev + theme(axis.text.x=element_text(angle=0), axis.text.y = element_blank(),   panel.grid= element_blank(), axis.line.y= element_blank(),  
+                                   axis.line.x= element_line(color="black", size=1)) +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Matrícula por campos de estudio agrupados", 
+       subtitle= "Estudiantes inscritos en licenciatura por agrupación de campos de estudio en relación al total en el estado de Sonora. \nTres ciclos representativos 2001-2020", 
+       caption =fuenteANUIES)
+
+
+ggsave("Gráficos/G05.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+## G06 POSGRADO
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+posgrados <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "PNPC", range = "A1:c64")
+
+poslevel<-c( "DOCTORADO", "MAESTRIA", "ESPECIALIDAD")
+posgrados <- posgrados %>%  mutate(label=paste0(POSGRADO," - ",CANTIDAD)) 
+
+posgrados <- posgrados %>% mutate(POSGRADO=factor(POSGRADO, levels = poslevel)) %>% group_by(AÑO) %>% mutate(acum=cumsum(CANTIDAD))
+ggplot(posgrados) + 
+  geom_area(aes(x=AÑO, y=CANTIDAD, group=POSGRADO, fill=POSGRADO),color="white", alpha=0.7) +
+  scale_fill_manual(values=c("#F45B69","#114B5F","#75D1A3"))+
+  scale_color_manual(values=c("#F45B69","#114B5F","#75D1A3"))+
+  scale_x_continuous(limits=c(2000,2020+5), breaks=seq(2000, 2020, by=1))+
+  scale_y_continuous(limits=c(0,62),breaks=seq(0,60, by=10)) +
+  geom_dl(data= subset(posgrados, AÑO=="2020"), aes(x=AÑO, y=acum, group=POSGRADO, label = label, color=POSGRADO), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 1.3, fontfamily= media, alpha=1)) +
+  coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev + 
+  theme(legend.position = "none") +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Programas de posgrado de calidad en Sonora", 
+       subtitle= "Número de programas de posgrado vigentes por tipo en el estado de Sonora. | Años 2000 a 2020", 
+       caption = fuenteconacyt)
+
+
+ggsave("Gráficos/G06.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+## G07 MH
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+MH <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "MH", range = "A1:B13")
+
+
+ggplot(MH) + 
+  geom_hline(aes(yintercept= 1), color= "gray20", linetype="dashed", alpha=.5, size=1.2) +
+  geom_line(aes(x=Ciclo, y=Razón, group = 1),color="#F45B69", size= 3, alpha=0.9) + 
+  geom_point(aes(x=Ciclo, y=Razón), color="#F45B69",fill="white",shape=21, stroke=3, size= 3, alpha=0.9) +
+  scale_y_continuous(limits=c(0.92,1.03),breaks=seq(0.92,1.03, by=0.02)) +
+  #coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev +
+  labs(y=NULL, title  = "Razón de feminidad en licenciatura", 
+       subtitle= "Número de mujeres inscritas en un programa de licenciatura en relación\nal número de hombres inscritos en el mismo nivel en el estado de Sonora. | Ciclos 2008-2009 a 2019-2020 ", 
+       caption =fuenteANUIES)
+
+
+ggsave("Gráficos/G07.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+## G11 FAM
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+FAM <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "FAM", range = "A1:B10")
+
+
+ggplot(FAM) + 
+  geom_line(aes(x=PERIODO, y=INVERSIÓN, group = 1),color="#114B5F", size= 3, alpha=0.9) + 
+  geom_point(aes(x=PERIODO, y=INVERSIÓN), color="#114B5F",fill="white",shape=21, stroke=3, size= 3, alpha=0.9) +
+  scale_y_continuous(limits=c(0,300)) +
+  scale_x_continuous(breaks=seq(2012,2020, by=1)) +
+  #coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev + theme(axis.text.x=element_text(angle=0), axis.title.y=element_text(hjust=0)) +
+  labs(y="millones de pesos", x="Ejercicio", title  = "FAM: recursos para infraestructura en educación superior en Sonora", 
+       subtitle= "Recursos ejercidos del Fondo de Aportaciones Múltiples (FAM) para infraestructura en educación superior.\nEjercicios 2012 a 2020.", 
+       caption =fuentePresupuestoFed)
+
+
+ggsave("Gráficos/G11.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+
+```
+
+## G08 Investigadores
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+Investigadores <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Investigadores", range = "A1:C148")
+Invlev<-c( "Ingenierías","Humanidades y Ciencias de la Conducta","Medicina y Ciencias de la Salud" , "Físico-Matemáticas y Ciencias de la Tierra",
+           "Ciencias Sociales","Biología y Química", "Biotecnología y Ciencias Agropecuarias" )
+
+Investigadores <- Investigadores %>% mutate(Campo=factor(Campo, levels = Invlev))
+
+ggplot(Investigadores) + 
+  geom_line(aes(x=Año, y=Investigadores, group = Campo, color= Campo), size= 2, alpha=0.6) + 
+  geom_point( data = subset(Investigadores, Año == max(Año)),aes(x=Año, y=Investigadores, fill=Campo), size=3 , shape=21, color="white", stroke=1) + 
+  geom_dl( aes(x=Año, y=Investigadores, group=Campo, label = paste0(" - ", Campo), color=Campo), method = list(dl.trans(x = x + 1.1), "last.bumpup", cex = 1.3, fontfamily= media, alpha=1)) +
+  geom_dl( data = subset(Investigadores, Año == max(Año)), aes(x=Año, y=Investigadores, group=Campo, label = Investigadores, color=Campo), method = list(dl.trans(x = x + 0.3), "last.bumpup", cex = 1.3, fontfamily= media, alpha=1)) +
+  #geom_point(aes(x=PERIODO, y=INVERSIÓN), color="#114B5F",fill="white",shape=21, stroke=3, size= 3, alpha=0.9) +
+  #scale_y_continuous(labels=unit_format(unit = "", scale = 1e-6, sep = "")) +
+  scale_color_lancet()+
+  scale_fill_lancet()+
+  scale_x_continuous(limits=c(2000,2020+10),breaks=seq(2000,2020, by=1)) +
+  #coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev + 
+  labs(y=NULL, title  = "Investigadores por área de conocimiento en Sonora", 
+       subtitle= "Número de investigadores en el padrón de CONACYT por área de conocimiento en el estado de Sonora.\nAños 2000-2020.", 
+       caption =fuenteconacytvoc)
+
+
+ggsave("Gráficos/G08.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+## G09 GASTO PÚBLICO
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+federal <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "PresFed", range = "A1:c28")
+
+ggplot(federal, aes(x=Año, y=Porcentaje, fill=Nivel)) + 
+  geom_bar(stat="identity", positition="fill", color="white", alpha=0.8, width = 0.7) +
+  geom_text(aes(label=scales::percent(Porcentaje, accuracy=1L),  color= Nivel), family=media, size=6,  position = position_stack(vjust = 0.5)) +
+    scale_fill_manual(values=c("#F45B69","#75D1A3",  "#114B5F"))+
+  scale_color_manual(values=c("white","black",  "white"), guide=FALSE)+
+  scale_x_continuous(breaks=seq(2012, 2020, by=1))+
+  scale_y_continuous(labels=percent) +
+  coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev + 
+  theme(legend.position = "top", legend.text = element_text(size=14), axis.line.y = element_blank(), axis.text.y = element_blank(), 
+   axis.text.x = element_text(family = normal, size =18, angle=0), legend.spacing.y = unit(1.2,"cm"), legend.key.size = unit(1.2,"cm"), legend.direction="horizontal") +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Gasto público federal destinado a educación en Sonora", 
+       subtitle= "Recursos públicos federales ejercidos por nivel educativo en el estado de Sonora. | Ejercicios 2012-2020.", 
+      caption =fuentePresupuestoFed)
+
+
+ggsave("Gráficos/G09.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+## G04 Matrícula por campo de estudio
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=10, dev= "png", type = "cairo"}
+
+campos <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Campos", range = "A1:c9")
+
+campos$label <- c(paste0("\n ",campos$Campo, "\n ",prettyNum(as.numeric(campos$Alumnos), big.mark=",", preserve.width="none"), "\n ", (round((campos$Alumnos/(sum(campos$Alumnos))*100), digits = 1)),"%"))
+
+campos <- campos %>% mutate(Campo= fct_reorder(Campo, Alumnos))
+
+
+ggplot(campos, aes(area = Alumnos, fill= Campo, label= campos$label)) + geom_treemap( size=5, color= "white", alpha=0.7) +
+  # scale_fill_futurama() +
+  # scale_fill_manual(values= c("#4D0026", "#194D33", "#9D0B18","#456990",  "#26734D",  "#F45B69","#660033", "#114B5F"))+
+  #scale_color_manual(values=c("#F45B69","#75D1A3",  "#114B5F", )) +
+  scale_fill_manual(values= c("#339966",  "#26734D",  "#F45B69","#EB1024","#9D0B18", "#114B5F","#0D3847", "#092630"))+
+  geom_treemap_text(family = media, colour = "white", place = "topleft",
+                    grow = FALSE, size=18) +  theme_void() +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  coord_cartesian(expand = FALSE, clip = 'off') +
+  theme_void() + temaev+
+  theme(axis.line.y = element_blank(), axis.text.y = element_blank(), axis.line.x = element_blank(), axis.text.x = element_blank())+
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Matrícula por campo de estudio en Sonora", 
+       subtitle= "Alumnos inscritos por campo amplio de formación académica | Ciclo 2019-2020.", 
+       caption =fuenteANUIES)
+
+
+ggsave("Gráficos/G04.png", bg = "white",width = 16, height = 10, type = "cairo", dpi = 800)
+```
+
+## G13 Ingresos
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=10, dev= "png", type = "cairo"}
+
+ingresos <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Ingresos", range = "A1:H8" )
+
+ingresos$label <- c(paste0("\n ",ingresos$Universidad, "\n ", (round(ingresos$Porcentaje*100, digits = 1)),"%\n"))
+ingresos$sublabel <- c(paste0("\n ",ingresos$Subsistema, "\n ", (round(ingresos$Psub*100, digits = 1)),"%\n"))
+
+Universidades <- c("UNISON", "ITSON", "UES", "Otros")
+
+
+# 
+# 
+# Subs<-c( "Universidades públicas estatales",
+# "Universidades públicas estatales con apoyo solidario",
+# "Universidades tecnológicas" ,"Institutos tecnológicos descentralizados"
+# )
+# 
+# ingresos <- ingresos %>% mutate(Subsistema=factor(Subsistema, levels = Subs))
+
+ggplot(ingresos, aes(area = Porcentajes, fill = Subsistema,
+               label = label, subgroup = sublabel)) +
+  geom_treemap(aes(color=Subsistema),size=2, alpha=0.7) +
+  geom_treemap_subgroup_border(color="white", size = 2) +
+  geom_treemap_subgroup_text(place = "centre", grow = FALSE, size = ingresos$tamano+5, colour = "white",
+                             family=media,) +
+  geom_treemap_text(place = "bottom",
+                    size = 24, family=negrita,grow = FALSE,
+                              alpha = ingresos$transp, colour = "black") +
+  scale_fill_manual(values= c("#114B5F",  "#660033","#4C5A96","#26734D","#F45B69" )) +
+  scale_color_manual(values= c("#114B5F",  "#660033","#4C5A96","#26734D","#F45B69" ))+
+  theme_void() + temaev + theme(axis.line.y = element_blank(), axis.text.y = element_blank(), axis.line.x = element_blank(), axis.text.x = element_blank())+
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Ingresos totales de las IPES estatales en Sonora", 
+       subtitle= "Ingresos totales de las IPES estatales por subsistema | Ejercicio 2020.", 
+         caption =fuentecp)
+
+
+ggsave("Gráficos/G13.png", bg = "white",width = 16, height = 10, type = "cairo", dpi = 800)
+```
+
+
+## G14 Egresos
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=10, dev= "png", type = "cairo"}
+
+gastos <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "Egresos", range = "A1:G4")
+
+fuentecpcirc <- "**Fuente:** Elaboración ISAF con información de la Cuenta<br>Pública del Gobierno del estado de Sonora, ejercicio 2020."
+
+gastos$label <- c(paste0("\n ",gastos$Concepto, "\n ",prettyNum(as.numeric(gastos$Monto), big.mark=",", preserve.width="none"), " mdp\n ", (round((gastos$Monto/(sum(gastos$Monto))*100), digits = 1)),"%"))
+
+gastos <- gastos  %>% arrange(desc(Capítulo)) %>%
+  mutate(prop = Monto*100/ sum(gastos$Monto)) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+
+gastos$fraction <- gastos$Monto / sum(gastos$Monto)
+gastos$ymax <- cumsum(gastos$fraction)
+
+gastos$ymin <- c(0, head(gastos$ymax, n=-1))
+
+gastos$labelPosition <- (gastos$ymax + gastos$ymin) / 2
+cap1000 <- gastos %>% filter(Capítulo=="1000")
+cap3000 <- gastos %>% filter(Capítulo=="3000")
+capotros<- gastos %>% filter(Capítulo=="Otros")
+# donut
+ggplot(gastos, aes(ymax=ymax, ymin=ymin, xmax=3.5, xmin=2.1, fill=Capítulo)) +
+  geom_rect(color="#114B5F", alpha=0.7) +
+  geom_text(x=cap1000$UB+3.8, data=cap1000,  aes(y=labelPosition+.02, label=label, color=Capítulo),  family=media, size=cap1000$size-0.5) + # x here controls label position (inner / outer)
+  geom_text(x=cap3000$UB+2.95, data=cap3000,  aes(y=labelPosition, label=label, color=Capítulo), family=media, size=cap3000$size+1.5) + # x here controls label position (inner / outer)
+  geom_text(x=capotros$UB+2.65, data=capotros,  aes(y=labelPosition, label=label, color=Capítulo), family=media, size=capotros$size+2) + # x here controls label position (inner / outer)
+  geom_text(x=0, y=0,label=paste0("\n\nEGRESO\nTOTAL\n",prettyNum(as.numeric(sum(gastos$Monto)), big.mark=",", preserve.width="none")," mdp"), family=media, size=12, color="black")+
+  scale_fill_manual(values=c("#114B5F","#F45B69","#339966"))+
+  scale_color_manual(values=c("#114B5F","#F45B69","#339966")) +
+  coord_polar(theta="y") +
+  xlim(c(-1, 4)) +
+  theme_void() + temaev+
+  theme(axis.line.y = element_blank(), axis.text.y = element_blank(), axis.line.x = element_blank(), axis.text.x = element_blank(), plot.title.position = "plot")+
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Egresos de las IPES estatales", 
+       subtitle= "Egresos de las IPES estatales de Sonora\npor capítulo de gasto. | Ejercicio 2020.", 
+       caption =fuentecpcirc)
+      
+
+ggsave("Gráficos/G14.png", bg = "white",width = 10, height = 10, type = "cairo", dpi = 800)
+```
+
+## G12 Egresos
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=10, dev= "png", type = "cairo"}
+
+getal <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "getal", range = "A1:C3")
+
+
+fuentepresupuesto <- "**Fuente:** Elaboración ISAF con información del<br>Presupuesto de Egresos del estado de Sonora, ejercicio fiscal 2020."
+getal$label <- c(paste0("\n ",getal$Tipo, "\n ",prettyNum(as.numeric(getal$Monto), big.mark=",", preserve.width="none"), " mdp\n", (round((getal$Monto/(sum(getal$Monto))*100), digits = 1)),"%\n"))
+
+getal <- getal  %>% arrange(desc(Tipo)) %>%
+  mutate(prop = Monto*100/ sum(getal$Monto)) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+
+getal$fraction <- getal$Monto / sum(getal$Monto)
+getal$ymax <- cumsum(getal$fraction)
+
+getal$ymin <- c(0, head(getal$ymax, n=-1))
+
+getal$labelPosition <- (getal$ymax + getal$ymin) / 2
+
+ggplot(getal, aes(ymax=ymax, ymin=ymin, xmax=3.5, xmin=2, fill=Tipo)) +
+  geom_rect(color="#114B5F", alpha=0.7) +
+  geom_text( x=4.9, aes(y=labelPosition, label=label, color=Tipo),  family=media, size=7.5-(getal$xub*1.5)) + # x here controls label position (inner / outer)
+  geom_text(x=-3, y=-2,label="\n\n\n\nTOTAL\nAPROBADO\n70,262\nmdp\n", family=media, size=11, color="#114B5F", hjust=0)+
+  scale_fill_manual(values=c("#F45B69", "#114B5F"))+
+  scale_color_manual(values=c("#F45B69", "transparent")) +
+  coord_polar(theta="y", start=40) +
+  xlim(c(-1, 4)) +
+  theme_void() + temaev+
+  theme(axis.line.y = element_blank(), axis.text.y = element_blank(), axis.line.x = element_blank(), axis.text.x = element_blank(), plot.title.position = "plot",
+        legend.title = element_blank())+
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Gasto presupuestado para\nEducación Superior y Posgrado", 
+       subtitle= "Presupuesto de Egresos aprobado del Gobierno del\nestado de Sonora. | Ejercicio 2020.", 
+      caption =fuentepresupuesto)
+      
+
+ggsave("Gráficos/G12.png", bg = "white",width = 10, height = 10, type = "cairo", dpi = 800)
+
+  
+```
+
+## G10 FONDOS FEDERALES
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+
+FEDERALES <- read_csv("Datos/FONDOS_FEDERALES.csv", 
+    col_types = cols(MONTO_DEVENGADO = col_double()), 
+    locale = locale(encoding = "ISO-8859-1"))
+FED <- FEDERALES %>% group_by(CICLO) %>% summarise(APROBADO=round(sum(MONTO_APROBADO)/1000000,1), EJERCIDO=round(sum(MONTO_EJERCIDO)/1000000,1), DEVENGADO=round(sum(MONTO_DEVENGADO)/1000000,1)) 
+
+ggplot(FED) + 
+  geom_col(aes(x=CICLO, y=EJERCIDO), fill= "#114B5F"  ,color="#114B5F" , alpha=0.8, width=0.7, size=1) +
+  geom_text(aes(x=CICLO, y=EJERCIDO, label=scales::comma(EJERCIDO)), color= "#114B5F", family=media, size=6, position = position_dodge(0.9), vjust=-0.5) + 
+  scale_x_continuous(limits=c(2007,2021), breaks=seq(2008, 2020, by=1))+
+  scale_y_continuous(limits=c(0,2700)) +
+  coord_cartesian(expand = TRUE, clip = 'off') +
+  theme_minimal() + temaev + 
+  theme(legend.position = "none", legend.text = element_text(size=18, family=normal), axis.line.y=element_blank(), axis.text.y = element_blank(),
+                                   legend.spacing.y = unit(1.2,"cm"), legend.key.size = unit(1.2,"cm"),legend.direction="horizontal") +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Recursos federales para educación superior y posgrado en Sonora", 
+       subtitle= "Recursos federales ejercidos en el estado de Sonora para las subfunciones 03 Educación Superior y 04 Posgrado.\nMillones de pesos corrientes | Ejercicios fiscales 2008 a 2020.\n", 
+                caption =fuentePresupuestoFed)
+
+
+ggsave("Gráficos/G10.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```
+
+
+
+## G15 Gasto por alumno
+```{r, echo=FALSE, dpi=800, fig.width=16, fig.height=8, dev= "png", type = "cairo"}
+GpA <- read_excel("Datos/TGPRES.xlsx", 
+                       sheet = "GastoAlumno", range = "A1:D3")
+
+ggplot(GpA) + 
+  geom_col(aes(x=Ejercicio, y=Monto, fill= Tono,color=Tono)   , alpha=0.9, width=1.8, size=1) +
+  geom_text(aes(x=Ejercicio, y=Monto, label=scales::comma(Monto), color=Tono), family=media, size=10, position = position_dodge(0.9), vjust=-0.5) + 
+  annotate("segment", x = 2016, xend = 2017, y = 69000, yend = 67000,
+           colour = "gray80", size = 2) +
+    annotate("segment", x = 2018, xend = 2019, y = 65000, yend = 63000,
+           colour = "gray80", size = 2, arrow = arrow()) +
+    coord_cartesian(expand = TRUE, clip = 'off') +
+  geom_text(x=2017.5, y=66000, label="-11%", family=media, size=10, color= "#F45B69") +
+  scale_fill_manual(values=c("#F45B69", "#114B5F"))+
+  scale_color_manual(values=c("#F45B69", "#114B5F"))+
+   scale_y_continuous(limits=c(0,75000)) +
+    scale_x_continuous(limits=c(2012,2024), breaks=c(2015,2020))+
+  theme_minimal() + temaev + 
+  theme(legend.position = "none", legend.text = element_text(size=18, family=normal), axis.line.y=element_blank(), axis.text.y = element_blank(),
+                                   legend.spacing.y = unit(1.2,"cm"), legend.key.size = unit(1.2,"cm"),legend.direction="horizontal",
+        axis.text.x = element_text(family = normal, size =24, angle=0, color="black")) +
+  labs(y = NULL, 
+       x = NULL,legend= NULL, title  = "Gasto total por alumno en las IPES de Sonora", 
+       subtitle= "Egresos devengados totales agregados de las IPES estatales en relación a su matrícula.\nEjercicios fiscales 2015 a 2020.\n", 
+       caption =fuentecpanuies)
+
+
+ggsave("Gráficos/G15.png", bg = "white",width = 16, height = 8, type = "cairo", dpi = 800)
+```

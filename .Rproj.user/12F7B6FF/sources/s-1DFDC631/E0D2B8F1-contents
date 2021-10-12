@@ -1,0 +1,176 @@
+library(tidyverse)
+library(extrafont)
+library(scales)
+library(plotly)
+library(htmlwidgets)
+library(showtext)
+library(tint)
+library(rgdal)
+library(rgeos)
+library(miniUI)
+library(zoo)
+library(leaflet)
+library("Cairo")
+library(htmltools)
+library(factoextra)
+library(broom)
+
+temaejes <- theme(axis.line = element_line(linetype = "solid"), plot.margin = margin(10, 25, 10, 25),
+                  plot.title = element_text(family = "Segoe UI Black", size = 15),  
+                  plot.subtitle = element_text(family = "Segoe UI Light", size = 10, color = "black"), legend.title = element_blank(),
+                  strip.text = element_text(family = "Segoe UI Black", size = 10),
+                  axis.text = element_text(family = "Segoe UI", size =6),
+                  plot.background = element_rect(fill = "white", color = "white", size = 1),
+                  axis.title.x = element_text(family = "Segoe UI Light", size = 8, hjust=1),
+                  axis.title.y = element_text(family = "Segoe UI Light", size = 8, hjust=1), 
+                  plot.caption = element_text(family = "Segoe UI", size = 6),
+                  legend.text = element_blank(),
+                  legend.position = "none", plot.title.position = 'plot', plot.caption.position = 'plot')
+
+
+
+censoseccion <- read_csv("01datos/eceg_2020_csv/conjunto_de_datos/INE_SECCION_2020.csv", 
+                            col_types = cols(POBTOT = col_double(),
+                                             GRAPROES = col_double(),
+                                             PSINDER = col_double(),
+                                             PAFIL_IPRI = col_double(),
+                                             TOTHOG = col_double(),
+                                             HOGJEF_F = col_double(),
+                                             TVIVPAR = col_double(),
+                                             VIVPAR_HAB = col_double(),
+                                             PRO_OCUP_C = col_double(),
+                                             VPH_INTER = col_double()))
+
+
+censoseccion [is.na(censoseccion)] <- 0
+censoseccionsonora <- censoseccion %>% filter(ENTIDAD=="26", MUNICIPIO=="49")
+hmosecc <- censoseccion %>% 
+  select(ENTIDAD,MUNICIPIO, ID,DISTRITO,SECCION,TIPO, POBTOT, GRAPROES, PSINDER, PAFIL_IPRI,TOTHOG, HOGJEF_F,TVIVPAR,VIVPAR_HAB,PRO_OCUP_C,VPH_INTER)
+hmosecc [is.na(hmosecc )] <- 0 
+hmosecc <- hmosecc%>% filter(POBTOT!=0) %>% filter (VIVPAR_HAB !=0)
+hmosecc <- hmosecc %>% mutate(JEFFEM=round(HOGJEF_F*100/TOTHOG,1), 
+                            SINDER=round(PSINDER*100/POBTOT,1),
+                            SPRIV=round(PAFIL_IPRI*100/POBTOT,1),
+                            INTERNET=round(VPH_INTER*100/VIVPAR_HAB,1))
+hmosecc [is.na(hmosecc )] <- 0 
+hmoseccestr <- hmosecc %>% select(GRAPROES, SINDER,SPRIV,PRO_OCUP_C,INTERNET)
+
+hmoPCA <- hmoseccestr %>% 
+  scale() %>%                   
+  prcomp()  
+
+HMOSECCPCA <- hmoPCA %>% augment(hmosecc)
+write_csv(HMOSECCPCA, "HMOSECCPCA.csv")
+
+arrow_style <- arrow(
+  angle = 20, length = grid::unit(8, "pt"),
+  ends = "first", type = "closed"
+)
+hmoPCA %>%
+  # extract rotation matrix
+  tidy(matrix = "rotation") %>%
+  pivot_wider(
+    names_from = "PC", values_from = "value",
+    names_prefix = "PC"
+  ) %>%
+  ggplot(aes(PC1, PC2)) +
+  geom_segment( color="salmon",
+                xend = 0, yend = 0,
+                arrow = arrow_style
+  ) +
+  geom_text(aes(label = column), hjust = 1, family="Segoe UI Light", size=3) +
+  theme_bw() + 
+  coord_cartesian(expand = TRUE, clip = 'off') + 
+  temaejes
+
+fviz_eig(hmoPCA, addlabels=TRUE)
+biplot(hmoPCA)
+
+
+res.var <- get_pca_var(hmoPCA)
+contribpca <-res.var$contrib        # Contributions to the PCs
+contribpca <- cbind(variables = rownames(contribpca), contribpca)
+contribpca <- data.frame(contribpca)
+
+contribPC1 <- contribpca %>% select(Dim.1) %>% mutate(Dim.1= round((as.numeric(Dim.1)),1)) %>%
+  arrange(desc(Dim.1)) 
+contribPC1
+
+contribpca %>% mutate(Dim.1= as.numeric(Dim.1)/100) %>% 
+  mutate(variables = fct_reorder(variables, Dim.1, .desc = TRUE)) %>% 
+  ggplot() +
+  geom_col(aes(x=variables, y=Dim.1), fill= "steelblue",width = 0.5, alpha=1) +
+  geom_text(aes(x=variables, y=Dim.1, label=variables), family="Segoe UI Bold", size=2, color="steelblue", angle=90, hjust=-0.1)+
+  scale_y_continuous(labels = scales::percent, limits = c(0,.4)) +
+  theme_bw() + temaejes + theme(axis.text.x=element_blank())+
+  labs(title= "Contribución de los factores a PC1", y="Contribución", x=NULL)
+
+
+
+
+
+hmosecc <- censoagebsonora %>% filter(MZA=="000") %>% 
+  select(ENTIDAD,NOM_ENT,MUN,NOM_MUN,LOC,NOM_LOC,AGEB, POBTOT, GRAPROES, PSINDER, PAFIL_IPRIV,TOTHOG, HOGJEF_F,TVIVPAR,VIVPAR_HAB,PRO_OCUP_C,VPH_INTER) %>% 
+  unite(CVEGEO,c(ENTIDAD,MUN,LOC,AGEB),  sep = "", remove = TRUE) %>% 
+  filter (NOM_MUN=="Hermosillo", NOM_LOC=="Total AGEB urbana")
+hmosecc [is.na(hmosecc )] <- 0 
+hmosecc <- hmosecc %>% filter(POBTOT!=0) %>% filter (VIVPAR_HAB !=0)
+hmosecc <- hmosecc %>% mutate(JEFFEM=round(HOGJEF_F*100/TOTHOG,1), 
+                            SINDER=round(PSINDER*100/POBTOT,1),
+                            SPRIV=round(PAFIL_IPRIV*100/POBTOT,1),
+                            INTERNET=round(VPH_INTER*100/VIVPAR_HAB,1))
+hmosecc [is.na(hmosecc )] <- 0 
+hmoseccestr <- hmosecc %>% select(GRAPROES, SINDER,SPRIV,PRO_OCUP_C,INTERNET)
+
+hmoPCA <- hmoseccestr %>% 
+  scale() %>%                   
+  prcomp()  
+
+HMOAGEBPCA <- hmoPCA %>% augment(hmosecc)
+write_csv(HMOAGEBPCA, "HMOAGEBPCA.csv")
+
+arrow_style <- arrow(
+  angle = 20, length = grid::unit(8, "pt"),
+  ends = "first", type = "closed"
+)
+hmoPCA %>%
+  # extract rotation matrix
+  tidy(matrix = "rotation") %>%
+  pivot_wider(
+    names_from = "PC", values_from = "value",
+    names_prefix = "PC"
+  ) %>%
+  ggplot(aes(PC1, PC2)) +
+  geom_segment( color="salmon",
+                xend = 0, yend = 0,
+                arrow = arrow_style
+  ) +
+  geom_text(aes(label = column), hjust = 1, family="Segoe UI Light", size=3) +
+  theme_bw() + 
+  coord_cartesian(expand = TRUE, clip = 'off') + 
+  temaejes
+
+fviz_eig(hmoPCA, addlabels=TRUE)
+biplot(hmoPCA)
+
+
+res.var <- get_pca_var(hmoPCA)
+contribpca <-res.var$contrib        # Contributions to the PCs
+contribpca <- cbind(variables = rownames(contribpca), contribpca)
+contribpca <- data.frame(contribpca)
+
+contribPC1 <- contribpca %>% select(Dim.1) %>% mutate(Dim.1= round((as.numeric(Dim.1)),1)) %>%
+  arrange(desc(Dim.1)) 
+contribPC1
+
+contribpca %>% mutate(Dim.1= as.numeric(Dim.1)/100) %>% 
+  mutate(variables = fct_reorder(variables, Dim.1, .desc = TRUE)) %>% 
+  ggplot() +
+  geom_col(aes(x=variables, y=Dim.1), fill= "steelblue",width = 0.5, alpha=1) +
+  geom_text(aes(x=variables, y=Dim.1, label=variables), family="Segoe UI Bold", size=2, color="steelblue", angle=90, hjust=-0.1)+
+  scale_y_continuous(labels = scales::percent, limits = c(0,.4)) +
+  theme_bw() + temaejes + theme(axis.text.x=element_blank())+
+  labs(title= "Contribución de los factores a PC1", y="Contribución", x=NULL)
+
+
+
