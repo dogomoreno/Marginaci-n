@@ -3,9 +3,9 @@
     "path": "C:/Users/luism/OneDrive/R/Marginación/GMU.R",
     "project_path": "GMU.R",
     "type": "r_source",
-    "hash": "3459576449",
+    "hash": "0",
     "contents": "",
-    "dirty": false,
+    "dirty": true,
     "created": 1633980220677.0,
     "source_on_save": false,
     "relative_order": 2,
@@ -13,15 +13,15 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "8,22",
-        "scrollLine": "0"
+        "cursorPosition": "141,0",
+        "scrollLine": "116"
     },
     "folds": "",
     "lastKnownWriteTime": 1634019357,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1634019357446,
+    "last_content_update": 1634019964011,
     "read_only": false,
     "read_only_alternatives": []
 }
