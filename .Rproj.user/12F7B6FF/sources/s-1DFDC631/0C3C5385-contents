@@ -160,9 +160,6 @@ popup <- paste0(
 
 mapaagebmarg <- leaflet(capa_ageb) %>% 
   addProviderTiles(providers$CartoDB.Voyager) %>%
-  addLayersControl( 
-    baseGroups = c("Municipal", "Urbano"), 
-    options = layersControlOptions(collapsed = FALSE, position = "topright")) %>% 
   addPolygons(data= capa_mun,
               stroke= TRUE,
               weight=0.2,                   
@@ -219,7 +216,10 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
   addLegend(position = "bottomleft",  pal = margpal, values = ~capa_ageb$GM_2020, opacity=1, group= "GRADO DE MARGINACIÓN", 
             labFormat = function(type, cuts, p) {  
               paste0(labs)} ,
-            title = "GRADO DE MARGINACIÓN<br>CONAPO,2020<br>(click en el área de interés para mayor información)", na.label = "No aplica")
+            title = "GRADO DE MARGINACIÓN<br>CONAPO,2020<br>(click en el área de interés para mayor información)", na.label = "No aplica") %>% 
+  addLayersControl( 
+    baseGroups = c("Municipal", "Urbano"), 
+    options = layersControlOptions(collapsed = FALSE, position = "bottomleft"))
  
 
 mapaagebmarg
