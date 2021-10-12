@@ -2,7 +2,7 @@
 rm(list = ls())
 # Paquetes requeridos
 if(!require('pacman')) install.packages('pacman')
-pacman::p_load(tidyverse, zip, readxl, 'Cairo', htmltools, leaflet, htmlwidgets, rgdal, rgeos, viridis, rcartocolor, leaflegend)
+pacman::p_load(tidyverse, zip, readxl, 'Cairo', htmltools, leaflet, htmlwidgets, rgdal, rgeos, viridis, rcartocolor, leaflet.extras)
 
 # Crear directorios
 dir.create("./01Datos")
@@ -129,11 +129,12 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
                                             "font-size" = "8px",
                                             "border-color" = "rgba(0,0,0,0.5)"
                                           )),
-              group= "Marginación") %>%
+              group= "AGEB Urbana") %>%
+  addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>% 
   addLegend(position = "bottomleft",  pal = margpal, values = ~capa_ageb$GM_2020, opacity=1, group= "GRADO DE MARGINACIÓN", 
             labFormat = function(type, cuts, p) {  
               paste0(labs)} ,
-            title = "GRADO DE MARGINACIÓN URBANA<br>CONAPO<br>(click en AGEB para mayor información)", na.label = "No aplica")
+            title = "GRADO DE MARGINACIÓN URBANA<br>CONAPO,2020<br>(click en AGEB para mayor información)", na.label = "No aplica")
  
 
 mapaagebmarg
