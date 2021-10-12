@@ -125,7 +125,7 @@ capa_mun <- capa_mun %>% merge(marginacion_municipal_sonora)
 popmun <- paste0(
   "<b>", "Municipio: ", "</b>", as.character(capa_mun$NOM_MUN),"<br>",
   "<b>", "Grado de marginación:   ", "</b>",   as.character(capa_mun$GM_2020),      "<br>",
-  "<b>", "Población total:   ", "</b>",   as.character(capa_mun$POB_TOTAL),      "<br>",
+  "<b>", "Población total:   ", "</b>",   as.character(capa_mun$POB_TOT),      "<br>",
   "<b>", "15 años o más analfabetas:   ", "</b>",   round(capa_mun$ANALF,1),"%",      "<br>",
   "<b>", "15 años o más sin educación básica:   ", "</b>",   round(capa_mun$SBASC,1),"%",      "<br>",
   "<b>", "Sin drenaje ni excusado:   ", "</b>",   round(capa_mun$OVSDE,1),    "%",  "<br>",
