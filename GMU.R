@@ -22,10 +22,20 @@ if(!file.exists(shapes.archivo)){
 conapo.url <- "http://www.conapo.gob.mx/work/models/CONAPO/Marginacion/Datos_Abiertos/IMU_2020.zip"
 conapo.archivo <- "C:/Users/luism/OneDrive/R/Marginación/01Datos/IMU_2020.zip"
 
+# R registra error al descargarlo desde el script, se recomienda bajar del explorador
+# mun.url <- "http://www.conapo.gob.mx/work/models/CONAPO/Marginacion/Datos_Abiertos/Municipio/IMM_2020.xls" 
+# mun.archivo <- "C:/Users/luism/OneDrive/R/Marginación/01Datos/IMM_2020.xls"
+
 if(!file.exists(conapo.archivo)){
   download.file(conapo.url, destfile = conapo.archivo)  
   unzip(conapo.archivo, exdir = "./01Datos")
+  
 }
+
+# if(!file.exists(mun.archivo)){
+#  download.file(mun.url, destfile = mun.archivo)  
+  
+# }
 
 
 # Carga de datos
@@ -60,6 +70,34 @@ capa_mun<- spTransform(capa_mun,
 
 str(capa_ageb@data)
 
+# Carga de datos municipales
+
+marginacion_municipal <- read_excel("01Datos/IMM_2020.xls", 
+                                 sheet = "IMM_2020") 
+
+
+## Niveles
+levels=c("Muy bajo", "Bajo", "Medio", "Alto", "Muy alto")
+
+# Se filtran las AGEBS Urbanas de Sonora, se ordenan los niveles del GM, y se seleccionan las variables
+marginacion_municipal_sonora <- marginacion_municipal %>% 
+  filter(NOM_ENT=="Sonora") %>% mutate(GM_2020=factor(GM_2020,levels))
+marginacion_municipal_sonora %>% group_by(GM_2020) %>% summarise(n())
+
+
+# Se carga el shapefile de agebs
+
+capa_ageb <- readOGR("02Shapes/conjunto_de_datos", layer="26a",  encoding = "UTF-8", use_iconv=TRUE)
+capa_ageb<- spTransform(capa_ageb, 
+                        CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+capa_mun <- readOGR("02Shapes/conjunto_de_datos", layer="26mun",  encoding = "UTF-8", use_iconv=TRUE)
+capa_mun<- spTransform(capa_mun, 
+                       CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+
+str(capa_ageb@data)
+
 
 
 ## Renombramos variable CVE_AGEB
@@ -67,6 +105,8 @@ str(capa_ageb@data)
 marginacion_urbana_sonora <- rename(marginacion_urbana_sonora, CVEGEO=CVE_AGEB)
 
 capa_ageb <- capa_ageb %>% merge(marginacion_urbana_sonora)
+
+
 
 capa_ageb <- capa_ageb[!is.na(capa_ageb@data$GM_2020),]
 str(capa_ageb@data)
@@ -79,12 +119,33 @@ margpal <-  colorFactor(Colores, levels=c("Muy bajo", "Bajo", "Medio", "Alto", "
 
 labs <- c("Muy bajo", "Bajo", "Medio", "Alto", "Muy alto")
 
+marginacion_municipal_sonora <- rename(marginacion_municipal_sonora, CVEGEO=CVE_MUN)
+
+capa_mun <- capa_mun %>% merge(marginacion_municipal_sonora)
+
+popmun <- paste0(
+  "<b>", "Municipio: ", "</b>", as.character(capa_mun$NOM_MUN),"<br>",
+  "<b>", "Grado de marginación:   ", "</b>",   as.character(capa_mun$GM_2020),      "<br>",
+  "<b>", "Población total:   ", "</b>",   prettyNum(as.numeric(capa_mun$POB_TOT), big.mark=",", preserve.width="none"),      "<br>",
+  "<b>", "15 años o más analfabetas:   ", "</b>",   round(capa_mun$ANALF,1),"%",      "<br>",
+  "<b>", "15 años o más sin educación básica:   ", "</b>",   round(capa_mun$SBASC,1),"%",      "<br>",
+  "<b>", "Sin drenaje ni excusado:   ", "</b>",   round(capa_mun$OVSDE,1),    "%",  "<br>",
+  "<b>", "Sin energía eléctrica:   ", "</b>",   round(capa_mun$OVSEE,1),     "%", "<br>",
+  "<b>", "Sin agua entubada:   ", "</b>",   round(capa_mun$OVSAE,1),     "%", "<br>",
+  "<b>", "Con piso de tierra:   ", "</b>",   round(capa_mun$OVPT,1),   "%",   "<br>",
+  "<b>", "Con hacinamiento:   ", "</b>",   round(capa_mun$VHAC,1),    "%",  "<br>",
+  "<b>", "En localidades menores a 5 mil habs:   ", "</b>",   round(capa_mun$PL.5000,1),   "%",   "<br>",
+  "<b>", "Ocupados con ingresos de hasta 2 S.M.:   ", "</b>",   round(capa_mun$PO2SM,1),     "%", "<br>",
+  "<b>", "www.luisarmandomoreno.com", "</b>")  %>% lapply(htmltools::HTML)
+
+
+
 popup <- paste0(
   "<b>", "Municipio: ", "</b>", as.character(capa_ageb$NOM_MUN),"<br>",  
   "<b>", "Localidad: ", "</b>", as.character(capa_ageb$NOM_LOC),"<br>",
   "<b>", "AGEB: ", "</b>", as.character(capa_ageb$CVE_AGEB),"<br>",
   "<b>", "Grado de marginación:   ", "</b>",   as.character(capa_ageb$GM_2020),      "<br>",
-  "<b>", "Población total:   ", "</b>",   as.character(capa_ageb$POB_TOTAL),      "<br>",
+  "<b>", "Población total:   ", "</b>",   prettyNum(as.numeric(capa_ageb$POB_TOTAL), big.mark=",", preserve.width="none"),      "<br>",
   "<b>", "6 a 14 años que no asiste a la escuela:   ", "</b>",   round(capa_ageb$P6A14NAE,1),"%",      "<br>",
   "<b>", "15 años o más sin educación básica:   ", "</b>",   round(capa_ageb$SBASC,1),"%",      "<br>",
   "<b>", "Sin servicios de salud:   ", "</b>",   round(capa_ageb$PSDSS,1),  "%",    "<br>",
@@ -102,12 +163,34 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
   addProviderTiles(providers$CartoDB.Voyager) %>%
   addPolygons(data= capa_mun,
               stroke= TRUE,
-              weight=0.5,                   
+              weight=0.2,                   
               opacity=1,
               fillColor = "transparent",
               color= "black",
               fillOpacity = 0,
-              smoothFactor = 0.5) %>% 
+              smoothFactor = 0.5) %>%
+  addPolygons(data= capa_mun,
+              stroke= TRUE,
+              weight=0.2,                   
+              opacity=1,
+              fillColor = ~margpal(capa_mun$GM_2020),
+              color= "black",
+              fillOpacity = 0.6,
+              smoothFactor = 0.5,
+              highlightOptions = highlightOptions(color = "black", 
+                                                  weight = 1.2,
+                                                  bringToFront = TRUE),
+              popup = popmun, 
+              popupOptions = labelOptions(noHide = F, direction = "auto",  closeOnClick = TRUE, 
+                                          style = list(
+                                            "color" = "black",
+                                            "font-family" = "Arial",
+                                            "font-style" = "regular",
+                                            "box-shadow" = "2px 2px rgba(0,0,0,0.25)",
+                                            "font-size" = "8px",
+                                            "border-color" = "rgba(0,0,0,0.5)"
+                                          )),
+              group= "Municipal") %>%
   addPolygons(data= capa_ageb,
               stroke= TRUE,
               weight=0.2,                   
@@ -129,12 +212,15 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
                                             "font-size" = "8px",
                                             "border-color" = "rgba(0,0,0,0.5)"
                                           )),
-              group= "AGEB Urbana") %>%
+              group= "Urbano") %>%
   addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>% 
   addLegend(position = "bottomleft",  pal = margpal, values = ~capa_ageb$GM_2020, opacity=1, group= "GRADO DE MARGINACIÓN", 
             labFormat = function(type, cuts, p) {  
               paste0(labs)} ,
-            title = "GRADO DE MARGINACIÓN URBANA<br>CONAPO,2020<br>(click en AGEB para mayor información)", na.label = "No aplica")
+            title = "GRADO DE MARGINACIÓN<br>CONAPO,2020<br>(click en el área de interés para mayor información)", na.label = "No aplica") %>% 
+  addLayersControl( 
+    baseGroups = c("Municipal", "Urbano"), 
+    options = layersControlOptions(collapsed = FALSE, position = "bottomleft"))
  
 
 mapaagebmarg
