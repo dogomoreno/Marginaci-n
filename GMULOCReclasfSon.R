@@ -222,6 +222,7 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
                                             "border-color" = "rgba(0,0,0,0.5)"
                                           )),
               group= "Municipal (clasificación Nacional)") %>%
+  addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>% 
   addLegend(position = "bottomleft",  pal = margpal, values = ~capa_ageb$GMSon_2020, opacity=1, group= "GRADO DE MARGINACIÓN SONORA", 
             labFormat = function(type, cuts, p) {  
               paste0(labs)} ,
