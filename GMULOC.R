@@ -69,7 +69,8 @@ marginacion_urbana_sonora <- marginacion_urbana %>%
   filter(NOM_ENT=="Sonora") %>% mutate(GM_2020=factor(GM_2020,levels))
 marginacion_urbana_sonora %>% group_by(GM_2020) %>% summarise(n())
 
-
+top_n(marginacion_urbana_sonora, 5, IMN_2020)
+top_n(marginacion_urbana_sonora, -5, IMN_2020)
 
 # Carga de datos de localidades
 
@@ -79,6 +80,9 @@ marginacion_localidad <- read_excel("01Datos/IML_2020.xls",
 marginacion_loc_sonora <- marginacion_localidad %>% 
   filter(NOM_ENT=="Sonora") %>% mutate(GM_2020=factor(GM_2020,levels))
 marginacion_loc_sonora %>% group_by(GM_2020) %>% summarise(n())
+
+top_n(marginacion_loc_sonora, 5, IMN_2020)
+top_n(marginacion_loc_sonora, -5, IMN_2020)
 
 # Carga de datos municipales
 
@@ -91,6 +95,10 @@ marginacion_municipal_sonora <- marginacion_municipal %>%
   filter(NOM_ENT=="Sonora") %>% mutate(GM_2020=factor(GM_2020,levels))
 marginacion_municipal_sonora %>% group_by(GM_2020) %>% summarise(n())
 
+top_n(marginacion_municipal_sonora, 5, IMN_2020)
+top_n(marginacion_municipal_sonora, -5, IMN_2020)
+
+str<-strata.cumrootf(marginacion_municipal_sonora$IMN_2020, CV=0.01, Ls=5, nclass=21)
 
 
 # Se carga el shapefile
