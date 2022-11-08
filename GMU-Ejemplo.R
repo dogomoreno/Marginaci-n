@@ -115,8 +115,7 @@ popup <- paste0(
   "<b>", "Con hacinamiento: ", "</b>", round(capa_ageb$OVHAC,1),  "%","<br>",
   "<b>", "Sin refrigerador: ", "</b>", round(capa_ageb$OVSREF,1), "%","<br>",
   "<b>", "Sin internet: ", "</b>", round(capa_ageb$OVSINT,1), "%", "<br>",
-  "<b>", "Sin celular: ", "</b>", round(capa_ageb$OVSCEL,1), "%", "<br>",
-  "<b>", "www.luisarmandomoreno.com", "</b>")  %>% lapply(htmltools::HTML) # Se aplica formato HTML
+  "<b>", "Sin celular: ", "</b>", round(capa_ageb$OVSCEL,1), "%", "<br>")  %>% lapply(htmltools::HTML) # Se aplica formato HTML
 
 mapaagebmarg <- leaflet(capa_ageb) %>% 
   addProviderTiles(providers$CartoDB.Voyager) %>% # Elegimos fondo del mapa

@@ -2,7 +2,7 @@
 rm(list = ls())
 # Paquetes requeridos
 if(!require('pacman')) install.packages('pacman')
-pacman::p_load(tidyverse, zip, readxl, 'Cairo', htmltools, leaflet, htmlwidgets, rgdal, rgeos, viridis, rcartocolor, leaflet.extras)
+pacman::p_load(tidyverse, zip, readxl, 'Cairo', htmltools, leaflet, htmlwidgets, rgdal, rgeos, viridis, rcartocolor, leaflet.extras,leafem)
 
 # Carga de datos
 
@@ -121,8 +121,7 @@ popup <- paste0(
   "<b>", "Con hacinamiento:   ", "</b>",   round(capa_ageb$OVHAC,1),    "%",  "<br>",
   "<b>", "Sin refrigerador:   ", "</b>",   round(capa_ageb$OVSREF,1),   "%",   "<br>",
   "<b>", "Sin internet:   ", "</b>",   round(capa_ageb$OVSINT,1),     "%", "<br>",
-  "<b>", "Sin celular:   ", "</b>",   round(capa_ageb$OVSCEL,1),    "%",  "<br>",
-  "<b>", "www.luisarmandomoreno.com", "</b>")  %>% lapply(htmltools::HTML)
+  "<b>", "Sin celular:   ", "</b>",   round(capa_ageb$OVSCEL,1),    "%",  "<br>")  %>% lapply(htmltools::HTML)
 
 mapaagebmarg <- leaflet(capa_ageb) %>% 
   addProviderTiles(providers$CartoDB.Voyager) %>%
@@ -134,6 +133,28 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
               color= "black",
               fillOpacity = 0,
               smoothFactor = 0.5) %>%
+  addPolygons(data= capa_ageb,
+              stroke= TRUE,
+              weight=0.2,                   
+              opacity=1,
+              fillColor = ~margpal(capa_ageb$GMSon_2020),
+              color= "white",
+              fillOpacity = 0.6,
+              smoothFactor = 0.5,
+              highlightOptions = highlightOptions(color = "black", 
+                                                  weight = 1.2,
+                                                  bringToFront = TRUE),
+              popup = popup, 
+              popupOptions = labelOptions(noHide = F, direction = "auto",  closeOnClick = TRUE, 
+                                          style = list(
+                                            "color" = "black",
+                                            "font-family" = "Arial",
+                                            "font-style" = "regular",
+                                            "box-shadow" = "2px 2px rgba(0,0,0,0.25)",
+                                            "font-size" = "8px",
+                                            "border-color" = "rgba(0,0,0,0.5)"
+                                          )),
+              group= "AGEB Urbana (clasificación Estatal)") %>%
   addPolygons(data= capa_mun,
               stroke= TRUE,
               weight=0.2,                   
@@ -178,29 +199,7 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
                                             "border-color" = "rgba(0,0,0,0.5)"
                                           )),
               group= "Localidad (clasificación Estatal)") %>%
-  addPolygons(data= capa_ageb,
-              stroke= TRUE,
-              weight=0.2,                   
-              opacity=1,
-              fillColor = ~margpal(capa_ageb$GMSon_2020),
-              color= "white",
-              fillOpacity = 0.6,
-              smoothFactor = 0.5,
-              highlightOptions = highlightOptions(color = "black", 
-                                                  weight = 1.2,
-                                                  bringToFront = TRUE),
-              popup = popup, 
-              popupOptions = labelOptions(noHide = F, direction = "auto",  closeOnClick = TRUE, 
-                                          style = list(
-                                            "color" = "black",
-                                            "font-family" = "Arial",
-                                            "font-style" = "regular",
-                                            "box-shadow" = "2px 2px rgba(0,0,0,0.25)",
-                                            "font-size" = "8px",
-                                            "border-color" = "rgba(0,0,0,0.5)"
-                                          )),
-              group= "AGEB Urbana (clasificación Estatal)") %>%
-  addPolygons(data= capa_mun,
+    addPolygons(data= capa_mun,
               stroke= TRUE,
               weight=0.2,                   
               opacity=1,
@@ -228,8 +227,12 @@ mapaagebmarg <- leaflet(capa_ageb) %>%
               paste0(labs)} ,
             title = "GRADO DE MARGINACIÓN<br>CONAPO,2020.<br>(click en el área de interés para mayor información)", na.label = "No aplica") %>% 
   addLayersControl( 
-    baseGroups = c("Municipal (clasificación Estatal)", "Municipal (clasificación Nacional)", "Localidad (clasificación Estatal)", "AGEB Urbana (clasificación Estatal)"), 
-    options = layersControlOptions(collapsed = FALSE, position = "bottomleft"))
+    baseGroups = c("AGEB Urbana (clasificación Estatal)","Localidad (clasificación Estatal)", "Municipal (clasificación Estatal)", "Municipal (clasificación Nacional)" ), 
+    options = layersControlOptions(collapsed = FALSE, position = "bottomleft")) %>% 
+  addLogo("https://www.luisarmandomoreno.com/wp-content/uploads/2022/05/SEDfesp.png",
+          src= "remote", position = "topright", url = "https://www.luisarmandomoreno.com/",
+          width = 100,
+          height = 90)
  
 
 mapaagebmarg
